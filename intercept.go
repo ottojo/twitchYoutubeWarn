@@ -9,28 +9,41 @@ import (
 
 // intercept looks for a youtube link / video id and issues a warning if appropriate
 func intercept(message twitch.PrivateMessage, matchedPrefix string) {
-	if strings.Contains(message.Message, "list=") {
-		// Check playlist
-		// TODO: analyze playlist
 
-	}
+	reason, suspicious := analyzeMessage(message)
 
-	// Check video
-
-	trimmedMessage := strings.TrimSpace(strings.TrimPrefix(message.Message, matchedPrefix))
-	videoID := extractVideoId(trimmedMessage)
-	log.Printf("Intercept | Check Video | %s | %s | \"%s\" | found ID \"%s\"\n",
-		message.Channel, message.User.DisplayName, message.Message, videoID)
-
-	reason, suspicious := analyzeVideo(videoID)
 	if suspicious {
-		log.Printf("Intercept | Not Suspicious | %s | %s | \"%s\" | %s\n",
+		log.Printf("Intercept | Suspicious | %s | %s | \"%s\" | %s\n",
 			message.Channel, message.User.DisplayName, message.Message, reason)
 		twitchChatClient.Say(message.Channel, "Warning: "+reason)
 	} else {
 		log.Printf("Intercept | Not Suspicious | %s | %s | \"%s\"\n",
 			message.Channel, message.User.DisplayName, message.Message)
 	}
+}
+
+func analyzeMessage(message twitch.PrivateMessage) (reason string, suspicious bool) {
+	trimmedMessage := strings.TrimSpace(message.Message[strings.Index(message.Message, " "):])
+
+	// Check playlist
+	playlistID := extractPlaylistId(trimmedMessage)
+	if playlistID != "" {
+		// TODO: analyze playlist
+		reasonPlaylist, suspiciousPlaylist := analyzePlaylist(playlistID)
+		suspicious = suspicious || suspiciousPlaylist
+		appendStringComma(&reason, reasonPlaylist)
+	}
+
+	// Check video
+	videoID := extractVideoId(trimmedMessage)
+	log.Printf("Intercept | Check Video | %s | %s | \"%s\" | found ID \"%s\"\n",
+		message.Channel, message.User.DisplayName, message.Message, videoID)
+
+	reasonVideo, suspiciousVideo := analyzeVideo(videoID)
+	suspicious = suspicious || suspiciousVideo
+	appendStringComma(&reason, reasonVideo)
+
+	return
 }
 
 // extractPlaylistId returns the playlist id if the message contains it ("&list=abc"), otherwise an empty string
@@ -83,13 +96,11 @@ func analyzeVideo(videoID string) (reason string, suspicious bool) {
 		if strings.Contains(video.Snippet.Title, "Troll") {
 			appendStringComma(&reason, "Title contains blacklisted word \"Troll\"")
 			suspicious = true
-
 		}
 
 		if video.ContentDetails.ContentRating != nil && video.ContentDetails.ContentRating.YtRating == "ytAgeRestricted" {
 			appendStringComma(&reason, "Video is age restricted")
 			suspicious = true
-
 		}
 
 		// TODO: Description analysis
@@ -98,10 +109,9 @@ func analyzeVideo(videoID string) (reason string, suspicious bool) {
 			// TODO: make rating threshold configurable
 			appendStringComma(&reason, "Video has less than 75% positive rating")
 			suspicious = true
-
 		}
 
-		if video.Statistics.ViewCount < 10000 {
+		if video.Statistics.ViewCount < 1000000 {
 			// TODO: make viewcount threshold configurable
 			appendStringComma(&reason, "Video has less than 10000 views")
 			suspicious = true
@@ -111,7 +121,6 @@ func analyzeVideo(videoID string) (reason string, suspicious bool) {
 		if video.Statistics.CommentCount < 50 {
 			appendStringComma(&reason, "Video has less than 50 comments")
 			suspicious = true
-
 		}
 
 		// TODO: Analyze playlists containing this video
