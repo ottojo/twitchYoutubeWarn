@@ -122,14 +122,13 @@ func analyzeVideo(videoID string) (reason string, suspicious bool) {
 			suspicious = true
 		}
 		
-		if video.Status.UploadStatus != "uploaded" {
-			appendStringComma(&reasons, "Video is not uploaded")
+		if video.Status.UploadStatus != "processed" {
+			appendStringComma(&reason, "Upload status is " + video.Status.UploadStatus + " (not processed)")
 			suspicious = true
 		}
 		
-		//TODO: Maybe add unlisted videos as well
 		if video.Status.PrivacyStatus == "private" {
-			appendStringComma(&reasons, "Video is private")
+			appendStringComma(&reason, "Video is private")
 			suspicious = true
 		}
 		
