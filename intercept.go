@@ -85,7 +85,7 @@ func extractVideoId(message string) string {
 func analyzeVideo(videoID string) (reason string, suspicious bool) {
 	suspicious = false
 	reason = ""
-	videoList, err := youtubeService.Videos.List("snippet,contentDetails,statistics").Id(videoID).Do()
+	videoList, err := youtubeService.Videos.List("snippet,contentDetails,status,statistics").Id(videoID).Do()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -115,14 +115,24 @@ func analyzeVideo(videoID string) (reason string, suspicious bool) {
 			// TODO: make viewcount threshold configurable
 			appendStringComma(&reason, "Video has less than 10000 views")
 			suspicious = true
-
 		}
 
 		if video.Statistics.CommentCount < 50 {
 			appendStringComma(&reason, "Video has less than 50 comments")
 			suspicious = true
 		}
-
+		
+		if video.Status.UploadStatus != "uploaded" {
+			appendStringComma(&reasons, "Video is not uploaded")
+			suspicious = true
+		}
+		
+		//TODO: Maybe add unlisted videos as well
+		if video.Status.PrivacyStatus == "private" {
+			appendStringComma(&reasons, "Video is private")
+			suspicious = true
+		}
+		
 		// TODO: Analyze playlists containing this video
 
 	}
