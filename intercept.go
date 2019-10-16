@@ -89,7 +89,7 @@ func analyzeVideo(videoID string) (reason string, suspicious bool) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("Analyze | Search | %s | %d videos found\n", videoID, len(videoList.Items))
+	log.Printf("Analyze | Search | Video | %s | %d videos found\n", videoID, len(videoList.Items))
 	for _, video := range videoList.Items {
 
 		// TODO: Title word blacklist
@@ -145,28 +145,28 @@ func analyzePlaylist(playlistID string) (reason string, suspicious bool) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("Analyze | Search | %s | %d playlists found\n", playlistID, len(playlistList.Items))
+	log.Printf("Analyze | Search | Playlist | %s | %d playlists found\n", playlistID, len(playlistList.Items))
 	for _, playlist := range playlistList.Items {
 
 		if strings.Contains(playlist.Snippet.Title, "Troll") {
-			appendStringComma(&reason, "Title contains blacklisted word \"Troll\"")
+			appendStringComma(&reason, "Playlist title contains blacklisted word \"Troll\"")
 			suspicious = true
 		}
 
 		if strings.Contains(playlist.Snippet.Description, "Troll") {
-			appendStringComma(&reason, "Description contains blacklisted word \"Troll\"")
+			appendStringComma(&reason, "Playlist description contains blacklisted word \"Troll\"")
 			suspicious = true
 		}
 
 		for _, tag := range playlist.Snippet.Tags {
-			if tag == "Troll" || tag == "troll" {
-				appendStringComma(&reason, "Taglist contains blacklisted word \""+tag+"\"")
+			if strings.EqualFold(tag, "troll") {
+				appendStringComma(&reason, "Playlist taglist contains blacklisted word \""+tag+"\"")
 				suspicious = true
 			}
 		}
 
 		if playlist.Status.PrivacyStatus == "private" {
-			appendStringComma(&reason, "Status is private")
+			appendStringComma(&reason, "Playlist status is private")
 			suspicious = true
 		}
 	}
