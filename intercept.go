@@ -89,7 +89,7 @@ func analyzeVideo(videoID string) (reason string, suspicious bool) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("Analyze | Search | %s | %d videos found\n", videoID, len(videoList.Items))
+	log.Printf("Analyze | Search | Video | %s | %d videos found\n", videoID, len(videoList.Items))
 	for _, video := range videoList.Items {
 
 		// TODO: Title word blacklist
@@ -111,7 +111,7 @@ func analyzeVideo(videoID string) (reason string, suspicious bool) {
 			suspicious = true
 		}
 
-		if video.Statistics.ViewCount < 1000000 {
+		if video.Statistics.ViewCount < 10000 {
 			// TODO: make viewcount threshold configurable
 			appendStringComma(&reason, "Video has less than 10000 views")
 			suspicious = true
@@ -121,17 +121,17 @@ func analyzeVideo(videoID string) (reason string, suspicious bool) {
 			appendStringComma(&reason, "Video has less than 50 comments")
 			suspicious = true
 		}
-		
+
 		if video.Status.UploadStatus != "processed" {
-			appendStringComma(&reason, "Upload status is " + video.Status.UploadStatus + " (not processed)")
+			appendStringComma(&reason, "Upload status is "+video.Status.UploadStatus+" (not processed)")
 			suspicious = true
 		}
-		
+
 		if video.Status.PrivacyStatus == "private" {
 			appendStringComma(&reason, "Video is private")
 			suspicious = true
 		}
-		
+
 		// TODO: Analyze playlists containing this video
 
 	}
@@ -139,10 +139,40 @@ func analyzeVideo(videoID string) (reason string, suspicious bool) {
 }
 
 func analyzePlaylist(playlistID string) (reason string, suspicious bool) {
+	suspicious = false
+	reason = ""
+	playlistList, err := youtubeService.Playlists.List("snippet,status").Id(playlistID).Do()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("Analyze | Search | Playlist | %s | %d playlists found\n", playlistID, len(playlistList.Items))
+	for _, playlist := range playlistList.Items {
+
+		if strings.Contains(playlist.Snippet.Title, "Troll") {
+			appendStringComma(&reason, "Playlist title contains blacklisted word \"Troll\"")
+			suspicious = true
+		}
+
+		if strings.Contains(playlist.Snippet.Description, "Troll") {
+			appendStringComma(&reason, "Playlist description contains blacklisted word \"Troll\"")
+			suspicious = true
+		}
+
+		for _, tag := range playlist.Snippet.Tags {
+			if strings.EqualFold(tag, "troll") {
+				appendStringComma(&reason, "Playlist taglist contains blacklisted word \""+tag+"\"")
+				suspicious = true
+			}
+		}
+
+		if playlist.Status.PrivacyStatus == "private" {
+			appendStringComma(&reason, "Playlist status is private")
+			suspicious = true
+		}
+	}
 	// TODO: Video analysis of containing videos
-	// TODO: Title analysis
 	// TODO: Deleted content
-	return "", false
+	return reason, suspicious
 }
 
 func appendStringComma(target *string, suffix string) {
