@@ -169,8 +169,27 @@ func analyzePlaylist(playlistID string) (reason string, suspicious bool) {
 			appendStringComma(&reason, "Playlist status is private")
 			suspicious = true
 		}
+
+		//analyzePlaylistItems
+		playlistItemList, err := youtubeService.PlaylistItems.List("status").PlaylistId(playlist.Id).Do()
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Printf("Analyze | Search | %s | %d playlist items found\n", playlistID, len(playlistItemList.Items))
+		privateCount := 0
+		for _, playlistItem := range playlistItemList.Items {
+			if playlistItem.Status.PrivacyStatus == "private" {
+				privateCount++
+			}
+		}
+
+		if float32(privateCount) / float32(len(playlistItemList.Items)) > .1 {
+			appendStringComma(&reason, "The rate of private Videos is over 10%")
+			suspicious = true
+		}
+
 	}
-	// TODO: Video analysis of containing videos
+
 	// TODO: Deleted content
 	return reason, suspicious
 }
